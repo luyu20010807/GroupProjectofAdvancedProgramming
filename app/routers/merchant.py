@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
@@ -22,6 +24,7 @@ ORDER_STATUS_OPTIONS = (
     ("completed", "???"),
     ("canceled", "???"),
 )
+ORDER_STATUSES = {value for value, _ in ORDER_STATUS_OPTIONS}
 
 REFUND_STATUS_OPTIONS = (
     ("pending_merchant", "?????"),
@@ -33,6 +36,12 @@ REFUND_STATUS_OPTIONS = (
     ("admin_rejected", "?????"),
     ("closed_return_timeout", "??????"),
 )
+REFUND_STATUSES = {value for value, _ in REFUND_STATUS_OPTIONS}
+
+
+def _validate_price_and_stock(price: float, stock: int) -> None:
+    if not math.isfinite(price) or price <= 0 or stock < 0:
+        raise HTTPException(400, "????????")
 
 
 @router.get("")
@@ -96,8 +105,13 @@ def product_create(
     db: Session = Depends(get_db),
 ):
     user = require_web_role(request, db, {"merchant"})
-    if price <= 0 or stock < 0:
+    name = name.strip()
+    category = category.strip() or "??"
+    description = description.strip()
+    image_url = image_url.strip()
+    if not name:
         raise HTTPException(400, "????????")
+    _validate_price_and_stock(price, stock)
     db.add(
         Product(
             merchant_id=user.id,
@@ -126,8 +140,7 @@ def product_update(
     product = db.get(Product, product_id)
     if not product or product.merchant_id != user.id:
         raise HTTPException(404, "?????")
-    if price <= 0 or stock < 0:
-        raise HTTPException(400, "????????")
+    _validate_price_and_stock(price, stock)
     product.price_cents = int(round(price * 100))
     product.stock = stock
     product.is_active = is_active
@@ -145,6 +158,8 @@ def orders(
     user = require_web_role(request, db, {"merchant"})
     status = status.strip()
     q = q.strip()
+    if status and status not in ORDER_STATUSES:
+        raise HTTPException(400, "??????????")
     stmt = select(Order).where(Order.merchant_id == user.id)
     if status:
         stmt = stmt.where(Order.status == status)
@@ -190,6 +205,8 @@ def refunds(
     user = require_web_role(request, db, {"merchant"})
     status = status.strip()
     q = q.strip()
+    if status and status not in REFUND_STATUSES:
+        raise HTTPException(400, "??????????")
     stmt = select(RefundRequest).where(RefundRequest.merchant_id == user.id)
     if status:
         stmt = stmt.where(RefundRequest.status == status)
@@ -222,6 +239,11 @@ def refund_decision(
     refund = db.get(RefundRequest, refund_id)
     if not refund:
         raise HTTPException(404, "??????")
+    if decision not in {"approve", "reject"}:
+        raise HTTPException(400, "?????????")
+    comment = comment.strip()
+    if decision == "reject" and not comment:
+        raise HTTPException(400, "??????????")
     merchant_decide(db, user, refund, decision == "approve", comment)
     return RedirectResponse("/merchant/refunds", status_code=303)
 
@@ -237,5 +259,5 @@ def confirm_receipt(
     refund = db.get(RefundRequest, refund_id)
     if not refund:
         raise HTTPException(404, "??????")
-    merchant_confirm_receipt(db, user, refund, comment)
+    merchant_confirm_receipt(db, user, refund, comment.strip())
     return RedirectResponse("/merchant/refunds", status_code=303)
