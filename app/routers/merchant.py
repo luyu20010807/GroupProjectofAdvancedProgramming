@@ -8,10 +8,31 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..dependencies import require_web_role
 from ..models import Order, Product, RefundRequest
+from ..services.order_service import transition_order
+from ..services.refund_service import merchant_confirm_receipt, merchant_decide
 from .shop import _ctx
 
 
 router = APIRouter(prefix="/merchant")
+
+ORDER_STATUS_OPTIONS = (
+    ("pending_payment", "???"),
+    ("paid", "???"),
+    ("shipped", "???"),
+    ("completed", "???"),
+    ("canceled", "???"),
+)
+
+REFUND_STATUS_OPTIONS = (
+    ("pending_merchant", "?????"),
+    ("waiting_return", "??????"),
+    ("returned", "?????"),
+    ("merchant_rejected", "?????"),
+    ("admin_intervening", "?????"),
+    ("refunded", "?????"),
+    ("admin_rejected", "?????"),
+    ("closed_return_timeout", "??????"),
+)
 
 
 @router.get("")
@@ -112,3 +133,109 @@ def product_update(
     product.is_active = is_active
     db.commit()
     return RedirectResponse("/merchant/products", status_code=303)
+
+
+@router.get("/orders")
+def orders(
+    request: Request,
+    status: str = "",
+    q: str = "",
+    db: Session = Depends(get_db),
+):
+    user = require_web_role(request, db, {"merchant"})
+    status = status.strip()
+    q = q.strip()
+    stmt = select(Order).where(Order.merchant_id == user.id)
+    if status:
+        stmt = stmt.where(Order.status == status)
+    if q:
+        stmt = stmt.where(Order.order_no.contains(q))
+    rows = list(db.scalars(stmt.order_by(Order.created_at.desc())))
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "merchant/orders.html",
+        _ctx(
+            request,
+            db,
+            orders=rows,
+            status=status,
+            q=q,
+            status_options=ORDER_STATUS_OPTIONS,
+        ),
+    )
+
+
+@router.post("/orders/{order_id}/ship")
+def ship(
+    order_id: int,
+    request: Request,
+    tracking_no: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = require_web_role(request, db, {"merchant"})
+    order = db.get(Order, order_id)
+    if not order or order.merchant_id != user.id:
+        raise HTTPException(404, "?????")
+    transition_order(db, order, user, "shipped", "????", tracking_no)
+    return RedirectResponse("/merchant/orders", status_code=303)
+
+
+@router.get("/refunds")
+def refunds(
+    request: Request,
+    status: str = "",
+    q: str = "",
+    db: Session = Depends(get_db),
+):
+    user = require_web_role(request, db, {"merchant"})
+    status = status.strip()
+    q = q.strip()
+    stmt = select(RefundRequest).where(RefundRequest.merchant_id == user.id)
+    if status:
+        stmt = stmt.where(RefundRequest.status == status)
+    if q:
+        stmt = stmt.where(RefundRequest.refund_no.contains(q))
+    rows = list(db.scalars(stmt.order_by(RefundRequest.created_at.desc())))
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "merchant/refunds.html",
+        _ctx(
+            request,
+            db,
+            refunds=rows,
+            status=status,
+            q=q,
+            status_options=REFUND_STATUS_OPTIONS,
+        ),
+    )
+
+
+@router.post("/refunds/{refund_id}/decision")
+def refund_decision(
+    refund_id: int,
+    request: Request,
+    decision: str = Form(...),
+    comment: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    user = require_web_role(request, db, {"merchant"})
+    refund = db.get(RefundRequest, refund_id)
+    if not refund:
+        raise HTTPException(404, "??????")
+    merchant_decide(db, user, refund, decision == "approve", comment)
+    return RedirectResponse("/merchant/refunds", status_code=303)
+
+
+@router.post("/refunds/{refund_id}/confirm-receipt")
+def confirm_receipt(
+    refund_id: int,
+    request: Request,
+    comment: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    user = require_web_role(request, db, {"merchant"})
+    refund = db.get(RefundRequest, refund_id)
+    if not refund:
+        raise HTTPException(404, "??????")
+    merchant_confirm_receipt(db, user, refund, comment)
+    return RedirectResponse("/merchant/refunds", status_code=303)

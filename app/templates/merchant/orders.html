@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">FULFILLMENT</span>
+    <h1>????</h1>
+    <p>?????????????????????????????</p>
+  </div>
+</div>
+
+<form class="filter-row" method="get" action="/merchant/orders">
+  <input aria-label="?????" name="q" value="{{ q }}" placeholder="?????">
+  <select aria-label="????" name="status">
+    <option value="">????</option>
+    {% for value, label in status_options %}
+    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button>??</button>
+  {% if q or status %}<a href="/merchant/orders">????</a>{% endif %}
+</form>
+
+<section class="card table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>??</th>
+          <th>????</th>
+          <th>??</th>
+          <th>??</th>
+          <th>??</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td>
+            <strong>{{ o.order_no }}</strong><br>
+            <span class="muted">{{ o.created_at|dt }}</span>
+          </td>
+          <td>
+            {{ o.receiver_name }} {{ o.receiver_phone }}<br>
+            <span class="muted">{{ o.receiver_address }}</span>
+          </td>
+          <td>{{ o.total_cents|money }}</td>
+          <td><span class="status {{ o.status }}">{{ o.status }}</span></td>
+          <td>
+            {% if o.status == 'paid' %}
+            <form class="row" method="post" action="/merchant/orders/{{ o.id }}/ship">
+              <input aria-label="????" name="tracking_no" placeholder="????" required>
+              <button class="primary">??</button>
+            </form>
+            {% else %}
+            <span class="muted">????????</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="empty">?????????</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

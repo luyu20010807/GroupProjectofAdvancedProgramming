@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">AFTER-SALES</span>
+    <h1>?????</h1>
+    <p>????????????????????????????????</p>
+  </div>
+</div>
+
+<form class="filter-row" method="get" action="/merchant/refunds">
+  <input aria-label="??????" name="q" value="{{ q }}" placeholder="??????">
+  <select aria-label="????" name="status">
+    <option value="">????</option>
+    {% for value, label in status_options %}
+    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button>??</button>
+  {% if q or status %}<a href="/merchant/refunds">????</a>{% endif %}
+</form>
+
+<div class="stack">
+  {% for r in refunds %}
+  <article class="card refund-card">
+    <div class="row between">
+      <div>
+        <span class="status {{ r.status }}">{{ r.status }}</span>
+        <h3>{{ r.refund_no }} ? ?? {{ r.order.order_no }}</h3>
+      </div>
+      <b class="price">{{ r.amount_cents|money }}</b>
+    </div>
+    <p>
+      <b>???</b>{{ r.user.display_name }}
+      <b>???</b>{{ r.refund_type }}
+      <b>???</b>{{ r.reason }}
+    </p>
+    <p>{{ r.description }}</p>
+    <div class="timeline">
+      <span>?? {{ r.created_at|dt }}</span>
+      <span>???? {{ r.merchant_deadline|dt }}</span>
+      {% if r.return_tracking_no %}<span>???? {{ r.return_tracking_no }}</span>{% endif %}
+    </div>
+
+    {% if r.status == 'pending_merchant' %}
+    <form class="decision-form" method="post" action="/merchant/refunds/{{ r.id }}/decision">
+      <label>
+        ????
+        <textarea name="comment" placeholder="???????????????????????"></textarea>
+      </label>
+      <button class="primary" name="decision" value="approve">??</button>
+      <button class="danger-button" name="decision" value="reject">??</button>
+    </form>
+    {% elif r.status == 'returned' %}
+    <form class="row" method="post" action="/merchant/refunds/{{ r.id }}/confirm-receipt">
+      <input aria-label="??????" name="comment" value="???????">
+      <button class="primary">?????????</button>
+    </form>
+    {% endif %}
+  </article>
+  {% else %}
+  <div class="empty card">???????????</div>
+  {% endfor %}
+</div>
+{% endblock %}
