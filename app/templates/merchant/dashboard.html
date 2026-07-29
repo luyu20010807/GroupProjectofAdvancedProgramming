@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">MERCHANT CONSOLE</span>
+    <h1>?????</h1>
+    <p>?????????????????????????</p>
+  </div>
+</div>
+
+<div class="stat-grid">
+  <a class="stat" href="/merchant/products">
+    <b>{{ counts.products }}</b>
+    <span>???</span>
+  </a>
+  <a class="stat warning" href="/merchant/orders?status=paid">
+    <b>{{ counts.paid_orders }}</b>
+    <span>???</span>
+  </a>
+  <a class="stat danger" href="/merchant/refunds?status=pending_merchant">
+    <b>{{ counts.pending_refunds }}</b>
+    <span>?????</span>
+  </a>
+</div>
+
+<section class="card section-gap">
+  <div class="row between">
+    <h2>????</h2>
+    <a href="/merchant/orders">????</a>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>???</th>
+          <th>??</th>
+          <th>??</th>
+          <th>??</th>
+          <th>??</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in recent_orders %}
+        <tr>
+          <td>{{ o.order_no }}</td>
+          <td>{{ o.user.display_name }}</td>
+          <td>{{ o.total_cents|money }}</td>
+          <td><span class="status {{ o.status }}">{{ o.status }}</span></td>
+          <td>{{ o.created_at|dt }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="empty">????</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
