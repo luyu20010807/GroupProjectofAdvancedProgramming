@@ -81,17 +81,19 @@ def cart_page(request: Request, db: Session = Depends(get_db)):
         _ctx(request, db, items=items, total=total, message=request.query_params.get("message", "")),
     )
 
-
+# fix：修复购物车使用缓存商品库存导致校验不准问题
 @router.post("/cart/{item_id}/update")
 def cart_update(item_id: int, request: Request, quantity: int = Form(...), db: Session = Depends(get_db)):
     user = require_web_role(request, db, {"user"})
     item = db.get(CartItem, item_id)
     if not item or item.user_id != user.id:
         raise HTTPException(404, "购物车条目不存在")
+    # 重新查询最新商品库存，避免缓存数据过期
+    product = db.get(Product, item.product_id)
     if quantity <= 0:
         db.delete(item)
     else:
-        if quantity > item.product.stock:
+        if quantity > product.stock:
             raise HTTPException(400, "库存不足")
         item.quantity = min(quantity, 99)
     db.commit()
