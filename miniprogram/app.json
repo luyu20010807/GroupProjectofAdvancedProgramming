@@ -1,0 +1,28 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/home/home",
+    "pages/product-detail/product-detail",
+    "pages/cart/cart",
+    "pages/orders/orders",
+    "pages/order-detail/order-detail",
+    "pages/refund/refund"
+  ],
+  "window": {
+    "navigationBarTitleText": "星河商城",
+    "navigationBarBackgroundColor": "#d71920",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f6f7f9"
+  },
+  "tabBar": {
+    "color": "#60646b",
+    "selectedColor": "#d71920",
+    "list": [
+      {"pagePath": "pages/home/home", "text": "商城"},
+      {"pagePath": "pages/cart/cart", "text": "购物车"},
+      {"pagePath": "pages/orders/orders", "text": "订单"}
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}
