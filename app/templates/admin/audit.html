@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block title %}审计日志{% endblock %}{% block content %}
+<div class="page-head"><div><span class="eyebrow">AUDIT TRAIL</span><h1>审计日志</h1><p>记录谁在什么时间对哪个业务对象执行了什么操作，以及状态前后变化。</p></div></div>
+<section class="card table-card"><table><thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>对象</th><th>状态变化</th><th>详情</th></tr></thead><tbody>{% for l in logs %}<tr><td>{{ l.created_at|dt }}</td><td>{{ l.actor.display_name if l.actor else '系统任务' }}<br><span class="muted">{{ l.actor_role }}</span></td><td>{{ l.action }}</td><td>{{ l.entity_type }}#{{ l.entity_id }}</td><td>{{ l.before_status }} → {{ l.after_status }}</td><td>{{ l.detail }}</td></tr>{% else %}<tr><td colspan="6" class="empty">暂无记录</td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}
