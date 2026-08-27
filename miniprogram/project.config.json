@@ -1,0 +1,9 @@
+{
+  "description": "星河商城微信小程序用户端",
+  "packOptions": {"ignore": []},
+  "setting": {"urlCheck": false, "es6": true, "postcss": true, "minified": true},
+  "compileType": "miniprogram",
+  "appid": "touristappid",
+  "projectname": "xinghe-commerce",
+  "condition": {}
+}

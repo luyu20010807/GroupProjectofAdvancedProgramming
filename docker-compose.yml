@@ -1,0 +1,12 @@
+services:
+  shop:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:////data/ecommerce.db
+      SECRET_KEY: docker-demo-secret
+    volumes:
+      - shop_data:/data
+volumes:
+  shop_data:
