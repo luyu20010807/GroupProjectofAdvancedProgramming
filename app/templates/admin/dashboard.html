@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% block title %}平台管理中心{% endblock %}{% block content %}
+<div class="page-head"><div><span class="eyebrow">PLATFORM GOVERNANCE</span><h1>平台管理中心</h1><p>客服、业务和技术管理员采用最小权限分工，不共享一套万能后台权限。</p></div><form method="post" action="/admin/run-timeouts"><button class="primary">执行超时巡检</button></form></div>
+<div class="stat-grid four"><div class="stat"><b>{{ counts.users }}</b><span>用户</span></div><div class="stat"><b>{{ counts.merchants }}</b><span>商家</span></div><div class="stat"><b>{{ counts.orders }}</b><span>订单</span></div><div class="stat danger"><b>{{ counts.interventions }}</b><span>待仲裁</span></div></div>
+<section class="card section-gap"><h2>最新审计事件</h2><table><thead><tr><th>时间</th><th>角色</th><th>动作</th><th>对象</th><th>状态变化</th><th>详情</th></tr></thead><tbody>{% for log in recent_logs %}<tr><td>{{ log.created_at|dt }}</td><td>{{ log.actor_role }}</td><td>{{ log.action }}</td><td>{{ log.entity_type }}#{{ log.entity_id }}</td><td>{{ log.before_status }} → {{ log.after_status }}</td><td>{{ log.detail }}</td></tr>{% else %}<tr><td colspan="6" class="empty">暂无审计记录</td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}
