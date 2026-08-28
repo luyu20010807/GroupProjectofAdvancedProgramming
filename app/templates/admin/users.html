@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block title %}账号与角色{% endblock %}{% block content %}
+<div class="page-head"><div><span class="eyebrow">RBAC</span><h1>账号与角色</h1><p>业务管理员可停用异常账号；客服无权更改角色，技术管理员无权仲裁退款。</p></div></div>
+<section class="card table-card"><table><thead><tr><th>账号</th><th>名称</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody>{% for u in users %}<tr><td>{{ u.username }}</td><td>{{ u.display_name }}</td><td><span class="tag">{{ u.role }}</span></td><td>{{ '正常' if u.is_active else '停用' }}</td><td>{{ u.created_at|dt }}</td><td>{% if u.id != user.id %}<form method="post" action="/admin/users/{{ u.id }}/toggle"><button>{{ '停用' if u.is_active else '启用' }}</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}

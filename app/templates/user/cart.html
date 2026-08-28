@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}购物车{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">CART & SPLIT ORDER</span><h1>购物车</h1><p>结算时按商家自动拆成多个订单，避免一个商家影响其他商家履约。</p></div></div>
+{% if message %}<div class="alert success">{{ message }}</div>{% endif %}
+<div class="two-col">
+<section class="card table-card">
+<table><thead><tr><th>商品</th><th>单价</th><th>数量</th><th>小计</th><th></th></tr></thead><tbody>
+{% for item in items %}<tr><td><strong>{{ item.product.name }}</strong><br><span class="muted small">{{ item.product.merchant.display_name }}</span></td><td>{{ item.product.price_cents|money }}</td><td><form class="inline" method="post" action="/cart/{{ item.id }}/update"><input class="qty" name="quantity" type="number" min="0" max="{{ item.product.stock }}" value="{{ item.quantity }}"><button>更新</button></form></td><td>{{ (item.product.price_cents * item.quantity)|money }}</td><td><form method="post" action="/cart/{{ item.id }}/delete"><button class="danger-link">删除</button></form></td></tr>{% else %}<tr><td colspan="5" class="empty">购物车为空</td></tr>{% endfor %}
+</tbody></table>
+</section>
+<section class="card checkout-card"><h2>结算信息</h2><div class="total-line"><span>商品总额</span><strong>{{ total|money }}</strong></div>
+<form method="post" action="/checkout"><label>收货人<input name="receiver_name" value="张同学" required></label><label>手机号<input name="receiver_phone" value="13800000000" required></label><label>收货地址<textarea name="receiver_address" required>某某大学学生公寓 1 号楼 101</textarea></label><label>订单备注<input name="remark" placeholder="选填"></label><button class="primary wide" {% if not items %}disabled{% endif %}>提交订单（模拟）</button></form></section>
+</div>
+{% endblock %}

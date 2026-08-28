@@ -1,0 +1,9 @@
+{
+  "name": "星河商城",
+  "short_name": "星河商城",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f9",
+  "theme_color": "#d71920",
+  "icons": [{"src": "/static/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}]
+}

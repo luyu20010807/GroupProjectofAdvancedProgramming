@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block title %}商品治理{% endblock %}{% block content %}
+<div class="page-head"><div><span class="eyebrow">CATALOG GOVERNANCE</span><h1>全平台商品治理</h1><p>业务管理员可跨商家检查商品状态，但商品日常维护仍由所属商家完成。</p></div></div>
+<section class="card table-card"><table><thead><tr><th>ID</th><th>商品</th><th>商家</th><th>分类</th><th>价格</th><th>库存</th><th>状态</th></tr></thead><tbody>{% for p in products %}<tr><td>{{ p.id }}</td><td>{{ p.name }}</td><td>{{ p.merchant.display_name }}</td><td>{{ p.category }}</td><td>{{ p.price_cents|money }}</td><td>{{ p.stock }}</td><td>{{ '上架' if p.is_active else '下架' }}</td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}我的订单{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">MY ORDERS</span><h1>我的订单</h1><p>每个订单只对应一个商家，状态与售后进展互不干扰。</p></div></div>
+{% if created %}<div class="alert success">下单成功，系统按商家生成订单：{{ created }}。请逐单完成模拟支付。</div>{% endif %}
+<div class="order-list">
+{% for order in orders %}<a class="order-card" href="/orders/{{ order.id }}"><div><span class="status {{ order.status }}">{{ order.status }}</span><h3>{{ order.order_no }}</h3><p>{{ order.merchant.display_name }} · {{ order.items|length }} 种商品 · {{ order.created_at|dt }}</p></div><div class="order-total">{{ order.total_cents|money }}<small>查看详情 →</small></div></a>{% else %}<div class="empty card">暂无订单</div>{% endfor %}
+</div>
+{% endblock %}

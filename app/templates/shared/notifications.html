@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block title %}消息通知{% endblock %}{% block content %}
+<div class="page-head"><div><span class="eyebrow">NOTIFICATIONS</span><h1>消息通知</h1><p>订单、售后、仲裁与自动任务都会向相关角色发送站内通知。</p></div></div>
+<div class="stack">{% for n in notifications %}<article class="card notification"><div class="row between"><strong>{{ n.title }}</strong><span class="muted">{{ n.created_at|dt }}</span></div><p>{{ n.content }}</p></article>{% else %}<div class="empty card">暂无通知</div>{% endfor %}</div>
+{% endblock %}
