@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#d71920">
+  <title>{% block title %}星河商城{% endblock %}</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/">星河商城</a>
+  <nav class="main-nav">
+    {% if user %}
+      {% if user.role == 'user' %}
+        <a href="/">商城</a><a href="/cart">购物车 <span class="badge">{{ cart_count }}</span></a><a href="/orders">我的订单</a>
+      {% elif user.role == 'merchant' %}
+        <a href="/merchant">商家概览</a><a href="/merchant/products">商品</a><a href="/merchant/orders">订单</a><a href="/merchant/refunds">售后</a>
+      {% else %}
+        <a href="/admin">平台概览</a>
+        {% if user.role in ['super_admin','customer_service','business_admin'] %}<a href="/admin/refunds">仲裁中心</a>{% endif %}
+        {% if user.role in ['super_admin','business_admin'] %}<a href="/admin/users">账号</a><a href="/admin/products">商品治理</a>{% endif %}
+        {% if user.role in ['super_admin','tech_admin','business_admin'] %}<a href="/admin/audit">审计日志</a>{% endif %}
+      {% endif %}
+      <a href="/notifications">通知 <span class="badge">{{ unread }}</span></a>
+      <span class="user-chip">{{ user.display_name }} · {{ user.role }}</span>
+      <form class="inline" action="/logout" method="post"><button class="link-button">退出</button></form>
+    {% else %}
+      <a href="/login">登录</a>
+    {% endif %}
+  </nav>
+</header>
+
+{% if request.query_params.get('message') %}<div class="toast">{{ request.query_params.get('message') }}</div>{% endif %}
+<main class="container">{% block content %}{% endblock %}</main>
+<footer class="footer">课程项目演示系统 · FastAPI + SQLite + PWA + 微信小程序</footer>
+<script src="/static/js/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

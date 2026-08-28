@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}登录 - 星河商城{% endblock %}
+{% block content %}
+<section class="login-layout">
+  <div class="hero-card">
+    <div class="eyebrow">MULTI-ROLE COMMERCE</div>
+    <h1>把业务流程做深，而不是堆页面</h1>
+    <p>覆盖用户购物、跨商家拆单、模拟支付、商家履约、退款退货、超时升级、平台仲裁、角色权限与全链路审计。</p>
+    <div class="flow-strip"><span>用户申请</span><b>→</b><span>商家审核</span><b>→</b><span>退货物流</span><b>→</b><span>平台兜底</span></div>
+  </div>
+  <form class="card login-card" method="post" action="/login">
+    <h2>登录演示系统</h2>
+    {% if error %}<div class="alert danger">{{ error }}</div>{% endif %}
+    <label>用户名<input name="username" required autocomplete="username"></label>
+    <label>密码<input name="password" type="password" required autocomplete="current-password"></label>
+    <button class="primary wide">登录</button>
+    <div class="demo-accounts">
+      <strong>演示账号（密码均为 123456）</strong>
+      <code>user1</code> 用户　<code>merchant1</code> 商家　<code>admin</code> 超级管理员<br>
+      <code>service</code> 客服管理员　<code>business</code> 业务管理员　<code>tech</code> 技术管理员
+    </div>
+  </form>
+</section>
+{% endblock %}

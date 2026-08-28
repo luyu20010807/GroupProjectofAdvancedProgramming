@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<div class="detail-grid">
+  <div class="detail-image" style="background-image:url('{{ product.image_url }}')"></div>
+  <section class="card">
+    <span class="tag">{{ product.category }}</span><h1>{{ product.name }}</h1>
+    <p class="lead">{{ product.description }}</p>
+    <div class="price xl">{{ product.price_cents|money }}</div>
+    <dl class="meta"><dt>商家</dt><dd>{{ product.merchant.display_name }}</dd><dt>库存</dt><dd>{{ product.stock }}</dd><dt>服务</dt><dd>7 天售后 · 超时自动升级平台</dd></dl>
+    {% if user and user.role == 'user' %}
+    <form class="row" method="post" action="/cart/add"><input type="hidden" name="product_id" value="{{ product.id }}"><input class="qty" type="number" name="quantity" value="1" min="1" max="{{ product.stock }}"><button class="primary grow">加入购物车</button></form>
+    {% else %}<a class="button primary" href="/login">登录后购买</a>{% endif %}
+  </section>
+</div>
+{% endblock %}

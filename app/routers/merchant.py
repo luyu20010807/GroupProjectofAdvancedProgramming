@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import math
-
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
@@ -17,79 +15,27 @@ from .shop import _ctx
 
 router = APIRouter(prefix="/merchant")
 
-ORDER_STATUS_OPTIONS = (
-    ("pending_payment", "???"),
-    ("paid", "???"),
-    ("shipped", "???"),
-    ("completed", "???"),
-    ("canceled", "???"),
-)
-ORDER_STATUSES = {value for value, _ in ORDER_STATUS_OPTIONS}
-
-REFUND_STATUS_OPTIONS = (
-    ("pending_merchant", "?????"),
-    ("waiting_return", "??????"),
-    ("returned", "?????"),
-    ("merchant_rejected", "?????"),
-    ("admin_intervening", "?????"),
-    ("refunded", "?????"),
-    ("admin_rejected", "?????"),
-    ("closed_return_timeout", "??????"),
-)
-REFUND_STATUSES = {value for value, _ in REFUND_STATUS_OPTIONS}
-
-
-def _validate_price_and_stock(price: float, stock: int) -> None:
-    if not math.isfinite(price) or price <= 0 or stock < 0:
-        raise HTTPException(400, "????????")
-
 
 @router.get("")
 def dashboard(request: Request, db: Session = Depends(get_db)):
     user = require_web_role(request, db, {"merchant"})
     counts = {
         "products": db.scalar(select(func.count(Product.id)).where(Product.merchant_id == user.id)) or 0,
-        "paid_orders": db.scalar(
-            select(func.count(Order.id)).where(Order.merchant_id == user.id, Order.status == "paid")
-        )
-        or 0,
-        "pending_refunds": db.scalar(
-            select(func.count(RefundRequest.id)).where(
-                RefundRequest.merchant_id == user.id,
-                RefundRequest.status.in_(["pending_merchant", "returned"]),
-            )
-        )
-        or 0,
+        "paid_orders": db.scalar(select(func.count(Order.id)).where(Order.merchant_id == user.id, Order.status == "paid")) or 0,
+        "pending_refunds": db.scalar(select(func.count(RefundRequest.id)).where(RefundRequest.merchant_id == user.id, RefundRequest.status.in_(["pending_merchant", "returned"]))) or 0,
     }
-    recent_orders = list(
-        db.scalars(
-            select(Order)
-            .where(Order.merchant_id == user.id)
-            .order_by(Order.created_at.desc())
-            .limit(8)
-        )
-    )
+    recent_orders = list(db.scalars(select(Order).where(Order.merchant_id == user.id).order_by(Order.created_at.desc()).limit(8)))
     return request.app.state.templates.TemplateResponse(
-        request,
-        "merchant/dashboard.html",
-        _ctx(request, db, counts=counts, recent_orders=recent_orders),
+        request, "merchant/dashboard.html", _ctx(request, db, counts=counts, recent_orders=recent_orders)
     )
 
 
 @router.get("/products")
 def products(request: Request, db: Session = Depends(get_db)):
     user = require_web_role(request, db, {"merchant"})
-    rows = list(
-        db.scalars(
-            select(Product)
-            .where(Product.merchant_id == user.id)
-            .order_by(Product.created_at.desc())
-        )
-    )
+    rows = list(db.scalars(select(Product).where(Product.merchant_id == user.id).order_by(Product.created_at.desc())))
     return request.app.state.templates.TemplateResponse(
-        request,
-        "merchant/products.html",
-        _ctx(request, db, products=rows),
+        request, "merchant/products.html", _ctx(request, db, products=rows)
     )
 
 
@@ -97,7 +43,7 @@ def products(request: Request, db: Session = Depends(get_db)):
 def product_create(
     request: Request,
     name: str = Form(...),
-    category: str = Form("??"),
+    category: str = Form("综合"),
     description: str = Form(""),
     price: float = Form(...),
     stock: int = Form(...),
@@ -105,24 +51,9 @@ def product_create(
     db: Session = Depends(get_db),
 ):
     user = require_web_role(request, db, {"merchant"})
-    name = name.strip()
-    category = category.strip() or "??"
-    description = description.strip()
-    image_url = image_url.strip()
-    if not name:
-        raise HTTPException(400, "????????")
-    _validate_price_and_stock(price, stock)
-    db.add(
-        Product(
-            merchant_id=user.id,
-            name=name,
-            category=category,
-            description=description,
-            price_cents=int(round(price * 100)),
-            stock=stock,
-            image_url=image_url,
-        )
-    )
+    if price <= 0 or stock < 0:
+        raise HTTPException(400, "价格或库存不合法")
+    db.add(Product(merchant_id=user.id, name=name, category=category, description=description, price_cents=int(round(price * 100)), stock=stock, image_url=image_url))
     db.commit()
     return RedirectResponse("/merchant/products", status_code=303)
 
@@ -139,8 +70,9 @@ def product_update(
     user = require_web_role(request, db, {"merchant"})
     product = db.get(Product, product_id)
     if not product or product.merchant_id != user.id:
-        raise HTTPException(404, "?????")
-    _validate_price_and_stock(price, stock)
+        raise HTTPException(404, "商品不存在")
+    if price <= 0 or stock < 0:
+        raise HTTPException(400, "价格或库存不合法")
     product.price_cents = int(round(price * 100))
     product.stock = stock
     product.is_active = is_active
@@ -149,81 +81,33 @@ def product_update(
 
 
 @router.get("/orders")
-def orders(
-    request: Request,
-    status: str = "",
-    q: str = "",
-    db: Session = Depends(get_db),
-):
+def orders(request: Request, status: str = "", db: Session = Depends(get_db)):
     user = require_web_role(request, db, {"merchant"})
-    status = status.strip()
-    q = q.strip()
-    if status and status not in ORDER_STATUSES:
-        raise HTTPException(400, "??????????")
     stmt = select(Order).where(Order.merchant_id == user.id)
     if status:
         stmt = stmt.where(Order.status == status)
-    if q:
-        stmt = stmt.where(Order.order_no.contains(q))
     rows = list(db.scalars(stmt.order_by(Order.created_at.desc())))
     return request.app.state.templates.TemplateResponse(
-        request,
-        "merchant/orders.html",
-        _ctx(
-            request,
-            db,
-            orders=rows,
-            status=status,
-            q=q,
-            status_options=ORDER_STATUS_OPTIONS,
-        ),
+        request, "merchant/orders.html", _ctx(request, db, orders=rows, status=status)
     )
 
 
 @router.post("/orders/{order_id}/ship")
-def ship(
-    order_id: int,
-    request: Request,
-    tracking_no: str = Form(...),
-    db: Session = Depends(get_db),
-):
+def ship(order_id: int, request: Request, tracking_no: str = Form(...), db: Session = Depends(get_db)):
     user = require_web_role(request, db, {"merchant"})
     order = db.get(Order, order_id)
     if not order or order.merchant_id != user.id:
-        raise HTTPException(404, "?????")
-    transition_order(db, order, user, "shipped", "????", tracking_no)
+        raise HTTPException(404, "订单不存在")
+    transition_order(db, order, user, "shipped", "商家发货", tracking_no)
     return RedirectResponse("/merchant/orders", status_code=303)
 
 
 @router.get("/refunds")
-def refunds(
-    request: Request,
-    status: str = "",
-    q: str = "",
-    db: Session = Depends(get_db),
-):
+def refunds(request: Request, db: Session = Depends(get_db)):
     user = require_web_role(request, db, {"merchant"})
-    status = status.strip()
-    q = q.strip()
-    if status and status not in REFUND_STATUSES:
-        raise HTTPException(400, "??????????")
-    stmt = select(RefundRequest).where(RefundRequest.merchant_id == user.id)
-    if status:
-        stmt = stmt.where(RefundRequest.status == status)
-    if q:
-        stmt = stmt.where(RefundRequest.refund_no.contains(q))
-    rows = list(db.scalars(stmt.order_by(RefundRequest.created_at.desc())))
+    rows = list(db.scalars(select(RefundRequest).where(RefundRequest.merchant_id == user.id).order_by(RefundRequest.created_at.desc())))
     return request.app.state.templates.TemplateResponse(
-        request,
-        "merchant/refunds.html",
-        _ctx(
-            request,
-            db,
-            refunds=rows,
-            status=status,
-            q=q,
-            status_options=REFUND_STATUS_OPTIONS,
-        ),
+        request, "merchant/refunds.html", _ctx(request, db, refunds=rows)
     )
 
 
@@ -238,26 +122,16 @@ def refund_decision(
     user = require_web_role(request, db, {"merchant"})
     refund = db.get(RefundRequest, refund_id)
     if not refund:
-        raise HTTPException(404, "??????")
-    if decision not in {"approve", "reject"}:
-        raise HTTPException(400, "?????????")
-    comment = comment.strip()
-    if decision == "reject" and not comment:
-        raise HTTPException(400, "??????????")
+        raise HTTPException(404, "售后单不存在")
     merchant_decide(db, user, refund, decision == "approve", comment)
     return RedirectResponse("/merchant/refunds", status_code=303)
 
 
 @router.post("/refunds/{refund_id}/confirm-receipt")
-def confirm_receipt(
-    refund_id: int,
-    request: Request,
-    comment: str = Form(""),
-    db: Session = Depends(get_db),
-):
+def confirm_receipt(refund_id: int, request: Request, comment: str = Form(""), db: Session = Depends(get_db)):
     user = require_web_role(request, db, {"merchant"})
     refund = db.get(RefundRequest, refund_id)
     if not refund:
-        raise HTTPException(404, "??????")
-    merchant_confirm_receipt(db, user, refund, comment.strip())
+        raise HTTPException(404, "售后单不存在")
+    merchant_confirm_receipt(db, user, refund, comment)
     return RedirectResponse("/merchant/refunds", status_code=303)

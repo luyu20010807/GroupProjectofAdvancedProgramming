@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block title %}发生错误{% endblock %}{% block content %}<section class="card error-page"><div class="error-code">{{ status_code }}</div><h1>{{ message }}</h1><p>该错误通常来自状态机或权限校验，说明系统阻止了一次不合法操作。</p><a class="button primary" href="javascript:history.back()">返回上一页</a></section>{% endblock %}
