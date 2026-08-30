@@ -15,6 +15,27 @@ from .shop import _ctx
 
 router = APIRouter(prefix="/merchant")
 
+ORDER_STATUS_OPTIONS = (
+    ("pending_payment", "待付款"),
+    ("paid", "已付款"),
+    ("shipped", "已发货"),
+    ("completed", "已完成"),
+    ("canceled", "已取消"),
+)
+ORDER_STATUSES = {value for value, _ in ORDER_STATUS_OPTIONS}
+
+REFUND_STATUS_OPTIONS = (
+    ("pending_merchant", "待商家处理"),
+    ("waiting_return", "等待用户寄回"),
+    ("returned", "用户已寄回"),
+    ("merchant_rejected", "商家已拒绝"),
+    ("admin_intervening", "平台介入中"),
+    ("refunded", "退款已完成"),
+    ("admin_rejected", "平台已拒绝"),
+    ("closed_return_timeout", "退回超时关闭"),
+)
+REFUND_STATUSES = {value for value, _ in REFUND_STATUS_OPTIONS}
+
 
 @router.get("")
 def dashboard(request: Request, db: Session = Depends(get_db)):
@@ -81,14 +102,22 @@ def product_update(
 
 
 @router.get("/orders")
-def orders(request: Request, status: str = "", db: Session = Depends(get_db)):
+def orders(request: Request, status: str = "", q: str = "", db: Session = Depends(get_db)):
     user = require_web_role(request, db, {"merchant"})
+    status = status.strip()
+    q = q.strip()
+    if status and status not in ORDER_STATUSES:
+        raise HTTPException(400, "订单状态不合法")
     stmt = select(Order).where(Order.merchant_id == user.id)
     if status:
         stmt = stmt.where(Order.status == status)
+    if q:
+        stmt = stmt.where(Order.order_no.contains(q))
     rows = list(db.scalars(stmt.order_by(Order.created_at.desc())))
     return request.app.state.templates.TemplateResponse(
-        request, "merchant/orders.html", _ctx(request, db, orders=rows, status=status)
+        request,
+        "merchant/orders.html",
+        _ctx(request, db, orders=rows, status=status, q=q, status_options=ORDER_STATUS_OPTIONS),
     )
 
 
@@ -103,11 +132,22 @@ def ship(order_id: int, request: Request, tracking_no: str = Form(...), db: Sess
 
 
 @router.get("/refunds")
-def refunds(request: Request, db: Session = Depends(get_db)):
+def refunds(request: Request, status: str = "", q: str = "", db: Session = Depends(get_db)):
     user = require_web_role(request, db, {"merchant"})
-    rows = list(db.scalars(select(RefundRequest).where(RefundRequest.merchant_id == user.id).order_by(RefundRequest.created_at.desc())))
+    status = status.strip()
+    q = q.strip()
+    if status and status not in REFUND_STATUSES:
+        raise HTTPException(400, "售后状态不合法")
+    stmt = select(RefundRequest).where(RefundRequest.merchant_id == user.id)
+    if status:
+        stmt = stmt.where(RefundRequest.status == status)
+    if q:
+        stmt = stmt.where(RefundRequest.refund_no.contains(q))
+    rows = list(db.scalars(stmt.order_by(RefundRequest.created_at.desc())))
     return request.app.state.templates.TemplateResponse(
-        request, "merchant/refunds.html", _ctx(request, db, refunds=rows)
+        request,
+        "merchant/refunds.html",
+        _ctx(request, db, refunds=rows, status=status, q=q, status_options=REFUND_STATUS_OPTIONS),
     )
 
 
@@ -123,6 +163,11 @@ def refund_decision(
     refund = db.get(RefundRequest, refund_id)
     if not refund:
         raise HTTPException(404, "售后单不存在")
+    if decision not in {"approve", "reject"}:
+        raise HTTPException(400, "售后决策不合法")
+    comment = comment.strip()
+    if decision == "reject" and not comment:
+        raise HTTPException(400, "拒绝售后必须填写审核意见")
     merchant_decide(db, user, refund, decision == "approve", comment)
     return RedirectResponse("/merchant/refunds", status_code=303)
 
@@ -133,5 +178,5 @@ def confirm_receipt(refund_id: int, request: Request, comment: str = Form(""), d
     refund = db.get(RefundRequest, refund_id)
     if not refund:
         raise HTTPException(404, "售后单不存在")
-    merchant_confirm_receipt(db, user, refund, comment)
+    merchant_confirm_receipt(db, user, refund, comment.strip())
     return RedirectResponse("/merchant/refunds", status_code=303)
